@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: env.VITE_DEV_API_ORIGIN || 'http://localhost',
+          target: env.VITE_DEV_API_ORIGIN || 'https://villamor-riesbelle-lavalust-back.onrender.com',
           changeOrigin: true,
           rewrite: (path) => `${apiPrefix}${path}`,
         },
