@@ -14,7 +14,16 @@ async function api(path, options = {}, currentTokens = null, onTokens = () => {}
       ...requestHeaders,
     },
   })
-  const readBody = (response) => response.json().catch(() => ({}))
+  const readBody = async (response) => {
+    const text = await response.text()
+    if (!text.trim()) return null
+
+    try {
+      return JSON.parse(text)
+    } catch {
+      return null
+    }
+  }
 
   let response = await send(currentTokens?.access_token)
   let body = await readBody(response)
@@ -27,9 +36,9 @@ async function api(path, options = {}, currentTokens = null, onTokens = () => {}
     })
     const refreshBody = await readBody(refreshResponse)
 
-    if (!refreshResponse.ok || !refreshBody.tokens?.access_token) {
+    if (!refreshResponse.ok || !refreshBody?.tokens?.access_token) {
       onTokens(null)
-      throw new Error(refreshBody.error || 'Your session expired. Please sign in again.')
+      throw new Error(refreshBody?.error || `Session refresh failed (HTTP ${refreshResponse.status}).`)
     }
 
     currentTokens = refreshBody.tokens
@@ -40,7 +49,11 @@ async function api(path, options = {}, currentTokens = null, onTokens = () => {}
 
   if (!response.ok) {
     if (response.status === 401 && currentTokens) onTokens(null)
-    throw new Error(body.error || body.message || 'Request failed.')
+    throw new Error(body?.error || body?.message || `Request failed (HTTP ${response.status}).`)
+  }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error(`The API returned an invalid response (HTTP ${response.status}). Check the backend service logs.`)
   }
 
   return body
